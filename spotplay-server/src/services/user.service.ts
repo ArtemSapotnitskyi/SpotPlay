@@ -9,7 +9,7 @@ export interface CreateUserInput {
 
 export const getById = async (id: string) => {
   const result = await pool.query(
-    "SELECT id, username, email, createdat FROM users WHERE id = $1",
+    "SELECT id, username, email, createdat, refreshtoken FROM users WHERE id = $1",
     [id],
   );
   return result.rows[0];
@@ -49,4 +49,10 @@ export const create = async (data: CreateUserInput) => {
   ]);
 
   return newUser;
+};
+
+export const removeRefreshToken = async (userId: string) => {
+  await pool.query("UPDATE users SET refreshtoken = NULL WHERE id = $1", [
+    userId,
+  ]);
 };
