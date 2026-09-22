@@ -37,7 +37,6 @@ export const getUserSongs = async (userId: string) => {
 };
 
 export const deleteSongById = async (songId: string, userId: string) => {
-  // Важливо: перевіряємо userId, щоб юзер міг видалити тільки свою пісню
   const result = await pool.query(
     `DELETE FROM Songs WHERE Id = $1 AND AddedByUserId = $2 RETURNING Id`,
     [songId, userId],
