@@ -46,7 +46,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       maxAge: AUTH.REFRESH_COOKIE_MAX_AGE,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
     res.status(201).json({
@@ -93,7 +93,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       maxAge: AUTH.REFRESH_COOKIE_MAX_AGE,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
     res.status(200).json({
@@ -158,7 +158,7 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
         maxAge: AUTH.REFRESH_COOKIE_MAX_AGE,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
     }
 
@@ -198,7 +198,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
     res.status(200).json({ message: "Logged out successfully" });

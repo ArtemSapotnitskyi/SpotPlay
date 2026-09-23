@@ -1,7 +1,8 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Playlist from "./pages/Playlist";
 import Albums from "./pages/Albums";
 import Statistics from "./pages/Statistics";
+import Auth from "./pages/Auth";
 
 // Panels
 import SideBar from "./components/SideBar/SideBar";
@@ -13,19 +14,25 @@ import PlayerFooter from "./components/PlayerFooter/PlayerFooter";
 import { PlayerProvider } from "./context/PlayerContext";
 
 export default function App() {
+  const location = useLocation();
+
+  const isAuthPage = location.pathname === "/login";
+
+  if (isAuthPage) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Auth />} />
+      </Routes>
+    );
+  }
+
   return (
     <PlayerProvider>
-      {/* 
-        ТУТ БУЛА ПОМИЛКА: bg-black замінено на динамічний фон 
-      */}
       <div className="flex flex-col h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white transition-colors duration-300">
         <div className="flex flex-1 overflow-hidden">
           <NavPanel />
           <SideBar />
 
-          {/* 
-            ТУТ БУЛА ПОМИЛКА: bg-white замінено на динамічний фон
-          */}
           <main className="flex-1 bg-[#FAFAFA] dark:bg-neutral-900 overflow-y-auto transition-colors duration-300">
             <Routes>
               <Route
@@ -35,6 +42,8 @@ export default function App() {
               <Route path="/statistics" element={<Statistics />} />
               <Route path="/playlist/:id" element={<Playlist />} />
               <Route path="/library" element={<Albums />} />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
 

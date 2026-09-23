@@ -1,6 +1,12 @@
+import { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { formatDuration } from "../shared/utils/formatters";
-import { userStats, allTracks, userPlaylists } from "../data/seed";
+import { allTracks } from "../data/seed";
+
+import {
+  activityService,
+  type DashboardStats,
+} from "../shared/api/services/activityService";
 
 // Icons
 import PlayIcon from "../components/icons/Play";
@@ -9,18 +15,14 @@ import LightningIcon from "../components/icons/Lightning";
 import TargetIcon from "../components/icons/Target";
 import FireIcon from "../components/icons/Fire";
 
-// Safe time parser to prevent undefined errors and handle 00:00
-const parseTimeSafe = (timeStr?: string) => {
-  if (!timeStr) return { h: "00", m: "00" };
-  const hMatch = timeStr.match(/(\d+)h/);
-  const mMatch = timeStr.match(/(\d+)m/);
-  return {
-    h: hMatch ? hMatch[1] : "00",
-    m: mMatch ? mMatch[1].padStart(2, "0") : "00",
-  };
+// Safe time parser converting raw seconds into formatted hours and minutes
+const formatSecondsToTime = (totalSeconds: number) => {
+  if (!totalSeconds) return { h: "0", m: "00" };
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  return { h: h.toString(), m: m.toString().padStart(2, "0") };
 };
 
-// Compact number formatter (1500 -> 1.5K)
 const formatCompactNumber = (num: number) => {
   if (!num) return "0";
   return Intl.NumberFormat("en-US", {
@@ -33,16 +35,67 @@ export default function MinimalStatistics() {
   const { currentTrack, isPlaying, togglePlayPause, playTrack } = usePlayer();
   const displayTrack = currentTrack || allTracks[0];
 
-  const allTimeStats = parseTimeSafe(userStats.listeningTime.allTime);
-  const thisWeekStats = userStats.listeningTime.thisWeek || "00h 00m";
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Dynamic library duration calculation
-  const totalLibraryMs = allTracks.reduce(
-    (acc, track) => acc + track.durationMs,
-    0,
+  // Fetch dashboard statistics on component mount
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setIsLoading(true);
+        const data = await activityService.getOverviewStats();
+        setStats(data);
+      } catch (err) {
+        console.error("Failed to fetch stats:", err);
+        setError("The statistics could not be loaded. You may need to log in.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="bg-[#FAFAFA] dark:bg-neutral-950 min-h-screen flex items-center justify-center font-sans text-neutral-900 dark:text-white">
+        <p className="animate-pulse">Loading your stats...</p>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="bg-[#FAFAFA] dark:bg-neutral-950 min-h-screen flex flex-col items-center justify-center font-sans text-neutral-900 dark:text-white gap-4">
+        <p className="text-red-500">{error || "No data available"}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-accent text-white rounded-lg hover:opacity-90"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  const allTimeStats = formatSecondsToTime(stats.totalListening.allTimeSeconds);
+  const thisWeekStatsRaw = formatSecondsToTime(
+    stats.totalListening.thisWeekSeconds,
   );
-  const libraryHours = Math.floor(totalLibraryMs / 3600000);
-  const libraryMinutes = Math.floor((totalLibraryMs % 3600000) / 60000);
+  const thisWeekStats = `${thisWeekStatsRaw.h}h ${thisWeekStatsRaw.m}m`;
+  const libraryStats = formatSecondsToTime(stats.libraryDurationSeconds);
+
+  const safeDailyGoal = stats.activity.dailyGoalMinutes || 1;
+  const dailyGoalPercentage = Math.min(
+    (stats.activity.todayListeningMinutes / safeDailyGoal) * 100,
+    100,
+  );
+
+  const weeklyPulsePercentage = Math.min(
+    (stats.activity.currentStreakDays / 7) * 100,
+    100,
+  );
 
   return (
     <div className="bg-[#FAFAFA] dark:bg-neutral-950 min-h-screen p-4 md:p-8 font-sans text-neutral-900 dark:text-white pb-24 selection:bg-accent selection:text-white transition-colors duration-300">
@@ -64,7 +117,6 @@ export default function MinimalStatistics() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Total Listening Time */}
           <div className="lg:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 flex flex-col justify-between transition-colors">
             <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest transition-colors">
               Total Listening Time
@@ -100,7 +152,6 @@ export default function MinimalStatistics() {
             </div>
           </div>
 
-          {/* Now Playing */}
           <div className="bg-white dark:bg-neutral-900 border border-accent rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden group transition-colors">
             <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest mb-6 transition-colors">
               Now Playing
@@ -186,11 +237,10 @@ export default function MinimalStatistics() {
             </div>
           </div>
 
-          {/* Library Stats Grid */}
           <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col justify-center items-center text-center transition-colors">
               <p className="text-4xl font-medium tracking-tight mb-2">
-                {formatCompactNumber(allTracks.length)}
+                {formatCompactNumber(stats.counts.tracks)}
               </p>
               <p className="text-neutral-400 dark:text-neutral-500 text-xs uppercase tracking-wider font-semibold transition-colors">
                 Tracks
@@ -198,7 +248,7 @@ export default function MinimalStatistics() {
             </div>
             <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col justify-center items-center text-center transition-colors">
               <p className="text-4xl font-medium tracking-tight mb-2">
-                {formatCompactNumber(userPlaylists.length)}
+                {formatCompactNumber(stats.counts.playlists)}
               </p>
               <p className="text-neutral-400 dark:text-neutral-500 text-xs uppercase tracking-wider font-semibold transition-colors">
                 Playlists
@@ -206,11 +256,11 @@ export default function MinimalStatistics() {
             </div>
             <div className="col-span-2 md:col-span-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 flex flex-col justify-center items-center text-center transition-colors">
               <p className="text-4xl font-medium tracking-tight mb-2">
-                {libraryHours}
+                {libraryStats.h}
                 <span className="text-2xl text-neutral-400 dark:text-neutral-500 font-light transition-colors">
                   h
                 </span>{" "}
-                {libraryMinutes.toString().padStart(2, "0")}
+                {libraryStats.m}
                 <span className="text-2xl text-neutral-400 dark:text-neutral-500 font-light transition-colors">
                   m
                 </span>
@@ -221,7 +271,6 @@ export default function MinimalStatistics() {
             </div>
           </div>
 
-          {/* Activity Section */}
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 transition-colors">
             <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-6 block transition-colors">
               Activity
@@ -233,12 +282,14 @@ export default function MinimalStatistics() {
                     <LightningIcon className="text-accent" />
                     <span className="text-sm font-medium">Weekly Pulse</span>
                   </div>
-                  <span className="text-xs font-semibold">3 Days</span>
+                  <span className="text-xs font-semibold">
+                    {stats.activity.currentStreakDays} Days
+                  </span>
                 </div>
                 <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden transition-colors">
                   <div
                     className="h-full bg-accent rounded-full transition-all"
-                    style={{ width: `${userStats.streaks.weeklyPulse}%` }}
+                    style={{ width: `${weeklyPulsePercentage}%` }}
                   ></div>
                 </div>
               </div>
@@ -250,16 +301,14 @@ export default function MinimalStatistics() {
                     <span className="text-sm font-medium">Daily Goal</span>
                   </div>
                   <span className="text-xs text-neutral-500 dark:text-neutral-400 transition-colors">
-                    {userStats.streaks.dailyGoal.current}m /{" "}
-                    {userStats.streaks.dailyGoal.total}m
+                    {stats.activity.todayListeningMinutes}m /{" "}
+                    {stats.activity.dailyGoalMinutes}m
                   </span>
                 </div>
                 <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden transition-colors">
                   <div
                     className="h-full bg-accent rounded-full transition-all"
-                    style={{
-                      width: `${(userStats.streaks.dailyGoal.current / userStats.streaks.dailyGoal.total) * 100}%`,
-                    }}
+                    style={{ width: `${dailyGoalPercentage}%` }}
                   ></div>
                 </div>
               </div>
@@ -270,13 +319,13 @@ export default function MinimalStatistics() {
                   <span className="text-sm font-medium">Current Streak</span>
                 </div>
                 <span className="text-sm font-medium">
-                  {userStats.streaks.streakDays} Day
+                  {stats.activity.currentStreakDays} Day
+                  {stats.activity.currentStreakDays !== 1 ? "s" : ""}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Heavy Rotation */}
           <div className="lg:col-span-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 transition-colors">
             <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-6 block transition-colors">
               Heavy Rotation
