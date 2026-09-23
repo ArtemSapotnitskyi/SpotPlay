@@ -66,7 +66,7 @@ const lofiArtist: ArtistDetails = {
 
 export const allTracks: Track[] = [
   {
-    id: "t1",
+    id: "a4037099-9e25-4b41-9707-517b7903fed9",
     title: "Перший хіт",
     durationMs: 204000,
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",

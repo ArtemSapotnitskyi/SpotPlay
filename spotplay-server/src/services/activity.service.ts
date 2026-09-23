@@ -6,8 +6,21 @@ export const saveListeningHistory = async (
   durationSeconds: number,
 ) => {
   await pool.query(
-    `INSERT INTO ListeningHistory (userId, songId, durationSeconds) VALUES ($1, $2, $3)`,
+    `INSERT INTO ListeningHistory (userId, songId, ListenDurationSeconds) VALUES ($1, $2, $3)`,
     [userId, songId, durationSeconds],
+  );
+
+  await pool.query(
+    `INSERT INTO UserActivity (UserId, CurrentStreakDays, LastActiveDate)
+     VALUES ($1, 1, CURRENT_DATE)
+     ON CONFLICT (UserId) DO UPDATE SET
+       CurrentStreakDays = CASE
+         WHEN UserActivity.LastActiveDate = CURRENT_DATE THEN UserActivity.CurrentStreakDays
+         WHEN UserActivity.LastActiveDate = CURRENT_DATE - INTERVAL '1 day' THEN UserActivity.CurrentStreakDays + 1
+         ELSE 1
+       END,
+       LastActiveDate = CURRENT_DATE`,
+    [userId],
   );
 };
 

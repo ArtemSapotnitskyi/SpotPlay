@@ -21,11 +21,35 @@ apiClient.interceptors.request.use((config) => {
 //Any response returned from the backend (whether successful or an error) must pass through this block of code before reaching your React components
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      if (window.location.pathname !== "/login") {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true; // To avoid getting caught in an endless cycle
+      try {
+        // axios.post(url, data, config)
+        const refreshResponse = await axios.post(
+          `${BASE_URL}/users/refresh`,
+          {},
+          { withCredentials: true },
+        );
+
+        // New token from request
+        const newAccessToken = refreshResponse.data.accessToken;
+        // Save new token in memory
+        localStorage.setItem("accessToken", newAccessToken);
+        // Updating Header in original request
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        return apiClient(originalRequest);
+      } catch (refreshError) {
         localStorage.removeItem("accessToken");
-        window.location.href = "/login";
+        if (
+          window.location.pathname !== "/login" &&
+          window.location.pathname !== "/register"
+        ) {
+          window.location.href = "/login";
+        }
+        return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);

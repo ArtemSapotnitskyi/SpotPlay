@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
-import { formatDuration } from "../shared/utils/formatters";
+import { formatDuration, formatSecondsToHM } from "../shared/utils/formatters";
 import { allTracks } from "../data/seed";
 
 import {
@@ -57,6 +57,50 @@ export default function MinimalStatistics() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    const handleOptimistic = (e: Event) => {
+      //Make custom Event with type Number
+      const customEvent = e as CustomEvent<number>;
+      const addedSeconds = customEvent.detail;
+
+      setStats((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return {
+          ...prev,
+          totalListening: {
+            ...prev.totalListening,
+            allTimeSeconds: prev.totalListening.allTimeSeconds + addedSeconds,
+            thisWeekSeconds: prev.totalListening.thisWeekSeconds + addedSeconds,
+          },
+          activity: {
+            ...prev.activity,
+            currentStreakDays:
+              prev.activity.currentStreakDays === 0
+                ? 1
+                : prev.activity.currentStreakDays,
+          },
+        };
+      });
+    };
+
+    const handleSilentSync = async () => {
+      try {
+        const freshData = await activityService.getOverviewStats();
+        setStats(freshData);
+      } catch (error) {}
+    };
+
+    window.addEventListener("optimisticUpdate", handleOptimistic);
+    window.addEventListener("silentSyncStats", handleSilentSync);
+
+    return () => {
+      window.removeEventListener("optimisticUpdate", handleOptimistic);
+      window.removeEventListener("silentSyncStats", handleSilentSync);
+    };
+  }, []);
+
   if (isLoading) {
     return (
       <div className="bg-[#FAFAFA] dark:bg-neutral-950 min-h-screen flex items-center justify-center font-sans text-neutral-900 dark:text-white">
@@ -79,11 +123,9 @@ export default function MinimalStatistics() {
     );
   }
 
-  const allTimeStats = formatSecondsToTime(stats.totalListening.allTimeSeconds);
-  const thisWeekStatsRaw = formatSecondsToTime(
-    stats.totalListening.thisWeekSeconds,
-  );
-  const thisWeekStats = `${thisWeekStatsRaw.h}h ${thisWeekStatsRaw.m}m`;
+  const allTime = formatSecondsToHM(stats.totalListening.allTimeSeconds);
+  const thisWeek = formatSecondsToHM(stats.totalListening.thisWeekSeconds);
+  const thisWeekStats = `${thisWeek.h}h ${thisWeek.m}m`;
   const libraryStats = formatSecondsToTime(stats.libraryDurationSeconds);
 
   const safeDailyGoal = stats.activity.dailyGoalMinutes || 1;
@@ -123,18 +165,14 @@ export default function MinimalStatistics() {
             </span>
             <div className="mt-8 flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div>
-                <div className="flex items-baseline gap-2 font-medium tracking-tighter text-6xl sm:text-8xl">
-                  <span>
-                    {allTimeStats.h}
-                    <span className="text-3xl sm:text-5xl text-neutral-400 dark:text-neutral-500 font-light ml-1 transition-colors">
-                      h
-                    </span>
+                <div className="text-6xl font-bold tracking-tighter">
+                  {allTime.h}
+                  <span className="text-3xl text-neutral-500 font-medium tracking-normal mx-1">
+                    h
                   </span>
-                  <span>
-                    {allTimeStats.m}
-                    <span className="text-3xl sm:text-5xl text-neutral-400 dark:text-neutral-500 font-light ml-1 transition-colors">
-                      m
-                    </span>
+                  {allTime.m}
+                  <span className="text-3xl text-neutral-500 font-medium tracking-normal ml-1">
+                    m
                   </span>
                 </div>
                 <span className="text-neutral-500 dark:text-neutral-400 text-sm mt-2 block transition-colors">
