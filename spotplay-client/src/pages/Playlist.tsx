@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { userPlaylists, type Track } from "../data/seed";
 import ClockIcon from "../components/icons/Clock";
 
 import { usePlayer } from "../context/PlayerContext";
 import { formatDuration, formatDate } from "../shared/utils/formatters";
+import { libraryService } from "../shared/api/services/libraryService";
+import type { Track } from "../data/seed";
 
 const PlayIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -16,15 +17,68 @@ export default function Playlist() {
   const { id } = useParams<{ id: string }>();
   const { playTrack, currentTrack } = usePlayer();
 
-  const currentPlaylist = userPlaylists.find((p) => p.id === id);
+  const [playlistInfo, setPlaylistInfo] = useState<any>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  const [tracks, setTracks] = useState<Track[]>(currentPlaylist?.tracks || []);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [ignoreClip, setIgnoreClip] = useState(true);
 
-  if (!currentPlaylist) {
+  useEffect(() => {
+    const fetchPlaylistData = async () => {
+      if (!id) return;
+      try {
+        setIsLoading(true);
+        const data = await libraryService.getPlaylistDetailed(id);
+
+        setPlaylistInfo(data);
+
+        localStorage.setItem("lastOpenedPlaylistId", id);
+
+        if (data.songs) {
+          const mappedTracks: Track[] = data.songs.map((song: any) => ({
+            id: song.id,
+            title: song.title,
+            durationMs: song.durationseconds * 1000,
+            audioUrl: `http://localhost:5001/api/songs/${song.id}/stream`,
+            imageUrl:
+              song.coverimage ||
+              "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=150",
+            albumName: "Single",
+            addedAt: song.addedat,
+            artist: {
+              name: song.artist || "Unknown Artist",
+              imageUrl: "",
+              isVerified: false,
+              monthlyListeners: 0,
+            },
+            credits: [],
+          }));
+          setTracks(mappedTracks);
+        }
+      } catch (err) {
+        console.error("Failed to fetch playlist:", err);
+        setError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPlaylistData();
+  }, [id]);
+
+  if (error) {
     return <Navigate to="/" replace />;
+  }
+
+  if (isLoading || !playlistInfo) {
+    return (
+      <div className="bg-[#FAFAFA] dark:bg-neutral-950 min-h-screen flex items-center justify-center">
+        <p className="animate-pulse text-neutral-500">Loading playlist...</p>
+      </div>
+    );
   }
 
   const gridLayout =
@@ -36,31 +90,45 @@ export default function Playlist() {
   );
   const totalMinutes = Math.floor(totalDurationMs / 60000);
 
-  const handleAddTrack = () => {
-    if (!searchQuery.trim()) return;
+  const handleAddTrack = async () => {
+    if (!searchQuery.trim() || !id) return;
 
-    const newTrack: Track = {
-      id: `t-${Date.now()}`,
-      title: searchQuery.split("-")[1]?.trim() || searchQuery.trim(),
-      durationMs: 195000,
-      audioUrl: "",
-      imageUrl:
-        "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=150",
-      albumName: "Unknown Album",
-      addedAt: new Date().toISOString(),
-      artist: {
-        name: searchQuery.split("-")[0]?.trim() || "Unknown Artist",
-        imageUrl: "",
-        isVerified: false,
-        monthlyListeners: 0,
-      },
-      credits: [],
-    };
+    try {
+      const response = await libraryService.createSongFromQuery(searchQuery);
+      const savedSong = response.song;
 
-    setTracks([...tracks, newTrack]);
-    setSearchQuery("");
-    setIsAddModalOpen(false);
+      await libraryService.addSongToPlaylist(id, savedSong.id);
+
+      const newTrack: Track = {
+        id: savedSong.id,
+        title: savedSong.title,
+        durationMs: savedSong.durationseconds * 1000,
+        audioUrl: `http://localhost:5001/api/songs/${savedSong.id}/stream`,
+        imageUrl:
+          savedSong.coverimage ||
+          "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=150",
+        albumName: "YouTube Audio",
+        addedAt: new Date().toISOString(),
+        artist: {
+          name: savedSong.artist,
+          imageUrl: "",
+          isVerified: false,
+          monthlyListeners: 0,
+        },
+        credits: [],
+      };
+
+      setTracks((prev) => [...prev, newTrack]);
+      setSearchQuery("");
+      setIsAddModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add track:", error);
+      alert("Error adding track! Check console for details.");
+    }
   };
+
+  const coverImage =
+    "https://images.unsplash.com/photo-1493225457124-a1a2a5956093?w=500";
 
   return (
     <section className="bg-[#FAFAFA] dark:bg-neutral-950 min-h-full pb-8 font-sans transition-colors duration-300">
@@ -68,27 +136,27 @@ export default function Playlist() {
       <div className="flex flex-col md:flex-row items-end gap-6 p-6 md:p-8 bg-gradient-to-b from-neutral-200 dark:from-neutral-900 to-[#FAFAFA] dark:to-neutral-950 border-b border-neutral-200/50 dark:border-neutral-800/50 transition-colors duration-300">
         <div className="shrink-0 shadow-lg rounded-xl overflow-hidden">
           <img
-            src={currentPlaylist.imageUrl}
-            alt={currentPlaylist.title}
+            src={coverImage}
+            alt={playlistInfo.name}
             className="w-48 h-48 md:w-60 md:h-60 object-cover"
           />
         </div>
 
         <div className="flex flex-col pb-1">
           <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest mb-2 transition-colors">
-            {currentPlaylist.type || "Playlist"}
+            Playlist
           </span>
 
           <h1 className="text-5xl md:text-7xl font-black text-neutral-900 dark:text-white tracking-tight mt-1 mb-6 transition-colors">
-            {currentPlaylist.title}
+            {playlistInfo.name}
           </h1>
 
           <div className="flex items-center gap-2 text-sm text-neutral-900 dark:text-neutral-300 transition-colors">
             <div className="w-7 h-7 bg-neutral-900 dark:bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold text-white uppercase transition-colors">
-              {currentPlaylist.owner.charAt(0)}
+              Y
             </div>
             <span className="font-semibold hover:underline cursor-pointer">
-              {currentPlaylist.owner}
+              You
             </span>
             <span className="text-neutral-500 dark:text-neutral-400 font-medium transition-colors">
               • {tracks.length} songs, {totalMinutes} min
@@ -101,7 +169,11 @@ export default function Playlist() {
       <div className="px-6 md:px-8 py-6 flex items-center gap-4">
         <button
           onClick={() => tracks.length > 0 && playTrack(tracks[0])}
-          className="w-14 h-14 bg-accent rounded-full flex items-center justify-center text-white hover:scale-105 transition-transform shadow-md"
+          className={`w-14 h-14 rounded-full flex items-center justify-center text-white transition-transform shadow-md ${
+            tracks.length > 0
+              ? "bg-accent hover:scale-105"
+              : "bg-neutral-300 dark:bg-neutral-700 cursor-not-allowed"
+          }`}
         >
           <PlayIcon className="w-7 h-7 ml-1" />
         </button>
@@ -171,11 +243,7 @@ export default function Playlist() {
                   />
                   <div className="flex flex-col truncate">
                     <span
-                      className={`font-semibold truncate transition-colors ${
-                        isCurrentTrack
-                          ? "text-accent"
-                          : "text-neutral-900 dark:text-white"
-                      }`}
+                      className={`font-semibold truncate transition-colors ${isCurrentTrack ? "text-accent" : "text-neutral-900 dark:text-white"}`}
                     >
                       {track.title}
                     </span>
@@ -257,11 +325,7 @@ export default function Playlist() {
 
               <label className="flex items-center gap-2.5 cursor-pointer group">
                 <div
-                  className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
-                    ignoreClip
-                      ? "bg-accent border-accent"
-                      : "bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 group-hover:border-accent"
-                  }`}
+                  className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${ignoreClip ? "bg-accent border-accent" : "bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 group-hover:border-accent"}`}
                 >
                   {ignoreClip && (
                     <svg

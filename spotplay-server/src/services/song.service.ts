@@ -11,7 +11,7 @@ interface CreateSongData {
 
 export const addSongToDb = async (data: CreateSongData) => {
   const result = await pool.query(
-    `INSERT INTO Songs (Title, Artist, SourceUrl, CoverImage, DurationSeconds, AddedByUserId) 
+    `INSERT INTO songs (Title, Artist, SourceUrl, CoverImage, DurationSeconds, AddedByUserId) 
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
     [
       data.title,
@@ -28,7 +28,7 @@ export const addSongToDb = async (data: CreateSongData) => {
 export const getUserSongs = async (userId: string) => {
   const result = await pool.query(
     `SELECT Id, Title, Artist, SourceUrl, CoverImage, DurationSeconds, CreatedAt 
-     FROM Songs 
+     FROM songs 
      WHERE AddedByUserId = $1 
      ORDER BY CreatedAt DESC`,
     [userId],
@@ -38,7 +38,7 @@ export const getUserSongs = async (userId: string) => {
 
 export const deleteSongById = async (songId: string, userId: string) => {
   const result = await pool.query(
-    `DELETE FROM Songs WHERE Id = $1 AND AddedByUserId = $2 RETURNING Id`,
+    `DELETE FROM songs WHERE Id = $1 AND AddedByUserId = $2 RETURNING Id`,
     [songId, userId],
   );
   return result.rowCount ? result.rowCount > 0 : false;

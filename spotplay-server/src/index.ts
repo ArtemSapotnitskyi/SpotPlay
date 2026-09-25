@@ -8,6 +8,7 @@ import userRoutes from "./routers/user.route.js";
 import activityRoutes from "./routers/activity.route.js";
 import songRoutes from "./routers/song.route.js";
 import libraryRoutes from "./routers/library.route.js";
+import { initSoundCloud } from "./config/soundcloud.js";
 
 dotenv.config();
 
@@ -37,6 +38,20 @@ app.get("/", (req, res) => {
   res.send("SpotPlay Backend is running on TypeScript!");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await initSoundCloud();
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error(
+      "Failed to start server due to initialization errors:",
+      error,
+    );
+    process.exit(1);
+  }
+};
+
+startServer();

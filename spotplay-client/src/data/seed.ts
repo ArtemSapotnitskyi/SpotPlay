@@ -20,6 +20,7 @@ export interface Track {
   albumName: string;
   addedAt: string;
   artist: ArtistDetails;
+  sourceUrl?: string;
   credits: Credit[];
 }
 

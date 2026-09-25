@@ -34,6 +34,7 @@ export const addSong = async (req: Request, res: Response): Promise<void> => {
     let durationSeconds = 0;
 
     if (!isValidUrl(query)) {
+      console.log(`[Search] Searching on SoundCloud for: ${query}`);
       const searchResults = await play.search(query, {
         limit: 1,
         source: { soundcloud: "tracks" },
@@ -41,10 +42,11 @@ export const addSong = async (req: Request, res: Response): Promise<void> => {
 
       if (!searchResults || searchResults.length === 0) {
         res.status(404).json({
-          message: "Track not found. Try a different name or direct URL.",
+          message: "Track not found on SoundCloud. Try a different name.",
         });
         return;
       }
+
       trackUrl = searchResults[0].url;
     }
 
@@ -53,20 +55,15 @@ export const addSong = async (req: Request, res: Response): Promise<void> => {
       title = trackInfo.name;
       artist =
         trackInfo.publisher?.artist || trackInfo.user?.name || "Unknown Artist";
-      coverImage = trackInfo.thumbnail || "";
+      coverImage =
+        trackInfo.thumbnail?.replace("large", "t500x500") ||
+        trackInfo.artwork_url ||
+        "";
       durationSeconds = trackInfo.durationInSec || 0;
-    } else if (
-      trackUrl.includes("youtube.com") ||
-      trackUrl.includes("youtu.be")
-    ) {
-      const videoInfo = await play.video_info(trackUrl);
-      title = videoInfo.video_details.title || "";
-      artist = videoInfo.video_details.channel?.name || "Unknown Artist";
-      coverImage = videoInfo.video_details.thumbnails[0]?.url || "";
-      durationSeconds = videoInfo.video_details.durationInSec;
     } else {
       res.status(400).json({
-        message: "Unsupported URL provider. Use SoundCloud or YouTube.",
+        message:
+          "Unsupported URL. Please provide a SoundCloud link or use text search.",
       });
       return;
     }
@@ -95,35 +92,60 @@ export const addSong = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: "Failed to add song" });
   }
 };
-
 export const streamSong = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
     const songId = req.params.id as string;
-    //Find song in db
+
     const result = await pool.query(
-      `SELECT SourceUrl FROM Songs WHERE Id = $1`,
+      `SELECT sourceurl FROM songs WHERE id = $1`,
       [songId],
     );
     const song = result.rows[0];
 
-    if (!song) {
-      res.status(404).json({ message: "Song not found" });
+    if (!song || !song.sourceurl) {
+      res.status(404).json({ message: "Song not found in database" });
       return;
     }
 
-    const stream = await play.stream(song.SourceUrl);
-    res.set({
-      "Content-Type": stream.type === "webm/opus" ? "audio/webm" : "audio/mpeg",
-      "Transfer-Encoding": "chunked",
+    const trackUrl = song.sourceurl;
+    console.log(`[Stream] Starting JS stream for: ${trackUrl}`);
+
+    if (trackUrl.endsWith(".mp3") || trackUrl.endsWith(".wav")) {
+      res.redirect(trackUrl);
+      return;
+    }
+
+    if (trackUrl.includes("soundcloud.com")) {
+      try {
+        const streamData = await play.stream(trackUrl);
+
+        res.setHeader("Content-Type", streamData.type || "audio/mpeg");
+        res.setHeader("Accept-Ranges", "bytes");
+
+        streamData.stream.pipe(res);
+        return;
+      } catch (streamError) {
+        console.error("[Stream] SoundCloud fetch error:", streamError);
+        if (!res.headersSent) {
+          res
+            .status(500)
+            .json({ message: "Failed to fetch stream from SoundCloud" });
+        }
+        return;
+      }
+    }
+
+    res.status(400).json({
+      message:
+        "Unsupported URL type for streaming. Only SoundCloud is allowed.",
     });
-    stream.stream.pipe(res);
   } catch (error) {
-    console.error("Stream error:", error);
+    console.error("Stream initialization error:", error);
     if (!res.headersSent) {
-      res.status(500).json({ message: "Failed to stream audio" });
+      res.status(500).json({ message: "Failed to process audio stream" });
     }
   }
 };

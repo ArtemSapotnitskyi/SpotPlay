@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { userPlaylists } from "../../data/seed";
 import { useDropdown } from "../../shared/hooks/useDropdown";
+import {
+  libraryService,
+  type LibraryTree,
+} from "../../shared/api/services/libraryService";
 
 // Icons
 import SearchIcon from "../icons/Search";
@@ -9,11 +12,6 @@ import ListIcon from "../icons/List";
 import PlusIcon from "../icons/Plus";
 import MusicIcon from "../icons/Music";
 import FolderIcon from "../icons/Folder";
-
-interface SidebarFolder {
-  id: string;
-  name: string;
-}
 
 export default function SideBar() {
   // Resizable sidebar state
@@ -28,13 +26,29 @@ export default function SideBar() {
   const plusMenu = useDropdown();
   const sortMenu = useDropdown();
 
-  const [sidebarPlaylists, setSidebarPlaylists] = useState(userPlaylists);
-  const [sidebarFolders, setSidebarFolders] = useState<SidebarFolder[]>([]);
+  const [library, setLibrary] = useState<LibraryTree | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [activeModal, setActiveModal] = useState<
     "none" | "playlist" | "folder"
   >("none");
   const [inputValue, setInputValue] = useState("");
+
+  const fetchLibrary = async () => {
+    try {
+      setIsLoading(true);
+      const data = await libraryService.getTree();
+      setLibrary(data);
+    } catch (error) {
+      console.error("Failed to fetch library:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLibrary();
+  }, []);
 
   // Handle click resizing
   useEffect(() => {
@@ -83,31 +97,23 @@ export default function SideBar() {
     setActiveModal(type);
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    if (activeModal === "playlist") {
-      const newPlaylist = {
-        id: `p-${Date.now()}`,
-        title: inputValue.trim(),
-        owner: "You",
-        description: "",
-        imageUrl:
-          "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=150",
-        tracks: [],
-        type: "Playlist" as const,
-      };
-      setSidebarPlaylists([newPlaylist, ...sidebarPlaylists]);
-    } else if (activeModal === "folder") {
-      const newFolder = {
-        id: `f-${Date.now()}`,
-        name: inputValue.trim(),
-      };
-      setSidebarFolders([newFolder, ...sidebarFolders]);
-    }
+    try {
+      if (activeModal === "playlist") {
+        await libraryService.createPlaylist(inputValue.trim());
+      } else if (activeModal === "folder") {
+        await libraryService.createFolder(inputValue.trim());
+      }
 
-    setActiveModal("none");
+      setActiveModal("none");
+      setInputValue("");
+      await fetchLibrary();
+    } catch (error) {
+      console.error(`Failed to create ${activeModal}:`, error);
+    }
   };
 
   return (
@@ -257,59 +263,71 @@ export default function SideBar() {
 
           {/* Library Items List */}
           <ul className="mt-3 space-y-1 overflow-y-auto flex-1 w-full custom-scrollbar">
-            {sidebarFolders.map((folder) => (
-              <li key={folder.id}>
-                <div
-                  className={`flex items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer transition-all duration-200 group ${
-                    isCollapsed ? "justify-center p-1" : "gap-3 p-2"
-                  }`}
-                >
-                  <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-neutral-200/50 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-lg group-hover:text-accent transition-colors">
-                    <FolderIcon />
-                  </div>
-                  {!isCollapsed && (
-                    <div className="overflow-hidden flex-1">
-                      <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate group-hover:text-accent transition-colors">
-                        {folder.name}
-                      </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5 transition-colors">
-                        Folder
-                      </p>
-                    </div>
-                  )}
-                </div>
+            {isLoading ? (
+              <li className="p-4 text-center text-xs text-neutral-500 animate-pulse">
+                Loading...
               </li>
-            ))}
-
-            {sidebarPlaylists.map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={`/playlist/${item.id}`}
-                  className={`flex items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer transition-all duration-200 group ${
-                    isCollapsed ? "justify-center p-1" : "gap-3 p-2"
-                  }`}
-                >
-                  <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden relative shadow-sm group-hover:shadow-md transition-shadow">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {!isCollapsed && (
-                    <div className="overflow-hidden flex-1">
-                      <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate transition-colors">
-                        {item.title}
-                      </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5 transition-colors">
-                        {item.type || "Playlist"} • {item.owner}
-                      </p>
+            ) : (
+              <>
+                {library?.folders.map((folder) => (
+                  <li key={folder.id}>
+                    <div
+                      className={`flex items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer transition-all duration-200 group ${
+                        isCollapsed ? "justify-center p-1" : "gap-3 p-2"
+                      }`}
+                    >
+                      <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-neutral-200/50 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-lg group-hover:text-accent transition-colors">
+                        <FolderIcon />
+                      </div>
+                      {!isCollapsed && (
+                        <div className="overflow-hidden flex-1">
+                          <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate group-hover:text-accent transition-colors">
+                            {folder.name}
+                          </p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5 transition-colors">
+                            Folder
+                          </p>
+                        </div>
+                      )}
                     </div>
+                  </li>
+                ))}
+
+                {library?.rootPlaylists.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      to={`/playlist/${item.id}`}
+                      className={`flex items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer transition-all duration-200 group ${
+                        isCollapsed ? "justify-center p-1" : "gap-3 p-2"
+                      }`}
+                    >
+                      <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden relative shadow-sm group-hover:shadow-md transition-shadow bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                        <MusicIcon className="w-6 h-6 text-neutral-400 dark:text-neutral-500" />
+                      </div>
+
+                      {!isCollapsed && (
+                        <div className="overflow-hidden flex-1">
+                          <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate transition-colors">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5 transition-colors">
+                            Playlist • {item.track_count || 0} tracks
+                          </p>
+                        </div>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+
+                {/* Пустий стан */}
+                {library?.folders.length === 0 &&
+                  library?.rootPlaylists.length === 0 && (
+                    <li className="text-center text-xs text-neutral-500 dark:text-neutral-400 p-4">
+                      Your library is empty.
+                    </li>
                   )}
-                </Link>
-              </li>
-            ))}
+              </>
+            )}
           </ul>
         </div>
 
@@ -320,7 +338,6 @@ export default function SideBar() {
         />
       </aside>
 
-      {/* Модальне вікно */}
       {activeModal !== "none" && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
           <div className="bg-white dark:bg-neutral-900 rounded-3xl p-6 w-full max-w-sm shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-neutral-100 dark:border-neutral-800 transition-colors">

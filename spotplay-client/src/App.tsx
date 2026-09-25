@@ -16,12 +16,15 @@ import { PlayerProvider } from "./context/PlayerContext";
 export default function App() {
   const location = useLocation();
 
-  const isAuthPage = location.pathname === "/login";
+  const isAuthPage =
+    location.pathname === "/login" || location.pathname === "/register";
 
   if (isAuthPage) {
     return (
       <Routes>
         <Route path="/login" element={<Auth />} />
+        <Route path="/register" element={<Auth />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
@@ -35,10 +38,7 @@ export default function App() {
 
           <main className="flex-1 bg-[#FAFAFA] dark:bg-neutral-900 overflow-y-auto transition-colors duration-300">
             <Routes>
-              <Route
-                path="/"
-                element={<Navigate to="/playlist/p1" replace />}
-              />
+              <Route path="/" element={<Navigate to="/statistics" replace />} />
               <Route path="/statistics" element={<Statistics />} />
               <Route path="/playlist/:id" element={<Playlist />} />
               <Route path="/library" element={<Albums />} />

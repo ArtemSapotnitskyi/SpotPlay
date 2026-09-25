@@ -32,10 +32,8 @@ export default function NavPanel() {
 
   return (
     <>
-      {/* Додано dark:bg-neutral-900 та dark:border-neutral-800 для темної теми сайдбару */}
       <aside className="relative w-20 flex-shrink-0 bg-light-greey dark:bg-neutral-950 text-player-dark dark:text-white flex flex-col items-center py-6 h-full shadow-md border-r border-gray-200 dark:border-neutral-800 transition-colors">
         <div className="flex flex-col items-center gap-6 w-full">
-          {/* Динамічний колір логотипу */}
           <div style={{ color: accentColor }} className="cursor-pointer">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -77,7 +75,16 @@ export default function NavPanel() {
           </button>
 
           <button
-            onClick={() => navigate("/")}
+            onClick={() => {
+              const lastPlaylistId = localStorage.getItem(
+                "lastOpenedPlaylistId",
+              );
+              if (lastPlaylistId && lastPlaylistId.length > 5) {
+                navigate(`/playlist/${lastPlaylistId}`);
+              } else {
+                navigate("/");
+              }
+            }}
             className={`p-2 rounded-xl shadow-sm transition-colors ${checkIsActive("/") ? "text-white" : "text-gray-400 hover:text-player-dark dark:hover:text-white shadow-none"}`}
             style={checkIsActive("/") ? { backgroundColor: accentColor } : {}}
           >
@@ -142,10 +149,8 @@ export default function NavPanel() {
         </div>
       </aside>
 
-      {/* МОДАЛЬНЕ ВІКНО */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          {/* dark:bg-neutral-900 для фону модалки */}
           <div className="bg-[#FAFAFA] dark:bg-neutral-900 rounded-3xl w-full max-w-4xl shadow-2xl border border-neutral-100 dark:border-neutral-800 flex flex-col max-h-[90vh] overflow-y-auto custom-scrollbar transition-colors">
             <div className="sticky top-0 bg-[#FAFAFA]/90 dark:bg-neutral-900/90 backdrop-blur-md z-10 px-8 py-6 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center transition-colors">
               <div>

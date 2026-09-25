@@ -57,7 +57,7 @@ export const getPlaylistWithSongs = async (
   const songsResult = await pool.query(
     `SELECT s.Id, s.Title, s.Artist, s.SourceUrl, s.CoverImage, s.DurationSeconds, ps.AddedAt 
      FROM PlaylistSongs ps
-     JOIN Songs s ON ps.SongId = s.Id
+     JOIN songs s ON ps.SongId = s.Id
      WHERE ps.PlaylistId = $1
      ORDER BY ps.SortOrder ASC`,
     [playlistId],

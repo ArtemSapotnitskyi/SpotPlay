@@ -1,6 +1,5 @@
 import { usePlayer } from "../../context/PlayerContext";
 import { formatDuration } from "../../shared/utils/formatters";
-import { allTracks } from "../../data/seed";
 
 //Icons
 import NextIcon from "../icons/Next";
@@ -30,20 +29,31 @@ const CheckCircleIcon = () => (
 );
 
 export default function PlayerFooter() {
-  const { currentTrack, isPlaying, togglePlayPause, playTrack } = usePlayer();
-  const displayTrack = currentTrack || allTracks[0];
+  const {
+    currentTrack,
+    isPlaying,
+    togglePlayPause,
+    currentTime,
+    playNext,
+    playPrev,
+  } = usePlayer();
 
   if (!currentTrack) {
     return (
-      <div className="flex items-center h-full px-2 text-neutral-500 dark:text-neutral-400 transition-colors">
+      <div className="flex items-center justify-center h-full px-2 text-neutral-500 dark:text-neutral-400 transition-colors text-sm font-medium">
         Виберіть трек для відтворення
       </div>
     );
   }
 
+  // Progress bar calculations
+  const durationSeconds = currentTrack.durationMs / 1000;
+  const progressPercent =
+    durationSeconds > 0 ? (currentTime / durationSeconds) * 100 : 0;
+
   return (
     <div className="flex items-center h-full px-2">
-      {/* 1. LEFT: Track Info */}
+      {/* Track Info */}
       <div className="flex items-center gap-4 overflow-hidden w-[30%] min-w-[180px]">
         <img
           src={currentTrack.imageUrl}
@@ -65,24 +75,28 @@ export default function PlayerFooter() {
         </div>
       </div>
 
-      {/* 2. CENTER: Controls & Progress */}
+      {/* Controls & Progress */}
       <div className="flex-1 flex flex-col items-center justify-center max-w-[722px] px-4">
         {/* Top Controls */}
         <div className="flex items-center gap-6 mb-2">
-          <button className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors">
+          <button
+            onClick={playPrev}
+            className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors"
+          >
             <PrevIcon />
           </button>
 
           <button
-            onClick={() => {
-              currentTrack ? togglePlayPause() : playTrack(displayTrack);
-            }}
+            onClick={togglePlayPause}
             className="w-8 h-8 flex items-center justify-center bg-accent text-white rounded-full hover:scale-105 transition-all shadow-sm"
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
           </button>
 
-          <button className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors">
+          <button
+            onClick={playNext}
+            className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors"
+          >
             <NextIcon />
           </button>
           <button className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors">
@@ -92,22 +106,21 @@ export default function PlayerFooter() {
 
         {/* Progress Bar */}
         <div className="flex items-center gap-2 w-full text-xs text-neutral-500 dark:text-neutral-400 font-medium transition-colors">
-          <span className="min-w-[40px] text-right">0:20</span>
+          <span className="min-w-[40px] text-right">
+            {formatDuration(currentTime * 1000)}
+          </span>
 
           <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full cursor-pointer group flex items-center relative transition-colors">
             <div
-              className={`h-full bg-accent ${
-                isPlaying ? "w-[40%]" : "w-[0%]"
-              } rounded-full transition-all duration-1000 relative`}
+              className="h-full bg-accent rounded-full relative transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
             >
               <div className="hidden group-hover:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white dark:bg-neutral-200 rounded-full shadow-md border border-neutral-100 dark:border-neutral-700"></div>
             </div>
           </div>
 
           <span className="min-w-[40px]">
-            {currentTrack.durationMs
-              ? formatDuration(currentTrack.durationMs)
-              : "0:00"}
+            {formatDuration(currentTrack.durationMs)}
           </span>
         </div>
       </div>

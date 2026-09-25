@@ -9,9 +9,10 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
+router.get("/:id/stream", streamSong);
+
 router.use(requireAuth);
 
-router.get("/:id/stream", streamSong);
 router.post("/import", addSong);
 router.get("/", getMySongs);
 router.delete("/:id", deleteSong);

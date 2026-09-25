@@ -48,7 +48,7 @@ export const getDashboardStats = async (userId: string) => {
 
     // Tracks Count
     pool.query(
-      `SELECT COUNT(Id) as count FROM Songs WHERE AddedByUserId = $1`,
+      `SELECT COUNT(Id) as count FROM songs WHERE AddedByUserId = $1`,
       [userId],
     ),
 
@@ -59,7 +59,7 @@ export const getDashboardStats = async (userId: string) => {
 
     // Library Duration
     pool.query(
-      `SELECT SUM(DurationSeconds) as total FROM Songs WHERE AddedByUserId = $1`,
+      `SELECT SUM(DurationSeconds) as total FROM songs WHERE AddedByUserId = $1`,
       [userId],
     ),
 

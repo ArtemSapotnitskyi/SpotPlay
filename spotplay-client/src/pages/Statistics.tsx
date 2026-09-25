@@ -14,6 +14,24 @@ import PauseIcon from "../components/icons/Pause";
 import LightningIcon from "../components/icons/Lightning";
 import TargetIcon from "../components/icons/Target";
 import FireIcon from "../components/icons/Fire";
+import MusicIcon from "../components/icons/Music";
+
+const PLACEHOLDER_TRACK = {
+  id: "placeholder",
+  title: "Your Track",
+  artist: {
+    name: "Artist",
+    imageUrl: "",
+    isVerified: false,
+    monthlyListeners: 0,
+  },
+  durationMs: 0,
+  audioUrl: "",
+  imageUrl: "",
+  albumName: "None",
+  addedAt: new Date().toISOString(),
+  credits: [],
+};
 
 // Safe time parser converting raw seconds into formatted hours and minutes
 const formatSecondsToTime = (totalSeconds: number) => {
@@ -32,8 +50,14 @@ const formatCompactNumber = (num: number) => {
 };
 
 export default function MinimalStatistics() {
-  const { currentTrack, isPlaying, togglePlayPause, playTrack } = usePlayer();
-  const displayTrack = currentTrack || allTracks[0];
+  const { currentTrack, isPlaying, togglePlayPause, playTrack, currentTime } =
+    usePlayer();
+  const displayTrack = currentTrack || PLACEHOLDER_TRACK;
+
+  // Pogress bar
+  const durationSeconds = displayTrack.durationMs / 1000;
+  const progressPercent =
+    durationSeconds > 0 ? (currentTime / durationSeconds) * 100 : 0;
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -196,11 +220,17 @@ export default function MinimalStatistics() {
             </span>
 
             <div className="flex flex-col gap-6 relative z-10">
-              <img
-                src={displayTrack.imageUrl}
-                alt={displayTrack.title}
-                className="w-full h-40 object-cover rounded-xl grayscale-[15%] group-hover:grayscale-0 transition-all duration-500 shadow-sm"
-              />
+              {currentTrack ? (
+                <img
+                  src={displayTrack.imageUrl}
+                  alt={displayTrack.title}
+                  className="w-full h-40 object-cover rounded-xl grayscale-[15%] group-hover:grayscale-0 transition-all duration-500 shadow-sm"
+                />
+              ) : (
+                <div className="w-full h-40 rounded-xl bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center shadow-sm transition-colors">
+                  <MusicIcon className="w-16 h-16 text-neutral-400 dark:text-neutral-500" />
+                </div>
+              )}
               <div>
                 <h3 className="text-lg font-semibold tracking-tight truncate">
                   {displayTrack.title}
@@ -213,9 +243,8 @@ export default function MinimalStatistics() {
               <div className="space-y-3">
                 <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full group/slider cursor-pointer flex items-center relative transition-colors">
                   <div
-                    className={`h-full bg-accent ${
-                      isPlaying ? "w-[40%]" : "w-[0%]"
-                    } rounded-full transition-all duration-1000 relative`}
+                    className="h-full bg-accent rounded-full relative transition-all duration-300"
+                    style={{ width: `${progressPercent || 0}%` }}
                   >
                     <div className="hidden group-hover/slider:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white dark:bg-neutral-200 rounded-full shadow-md border border-neutral-100 dark:border-neutral-700 z-10"></div>
                   </div>
@@ -223,10 +252,14 @@ export default function MinimalStatistics() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium w-8 transition-colors">
-                    {isPlaying ? "1:24" : "0:00"}
+                    {formatDuration(currentTime * 1000)}
                   </span>
+
                   <div className="flex items-center gap-4">
-                    <button className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors">
+                    <button
+                      disabled={!currentTrack}
+                      className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -241,17 +274,23 @@ export default function MinimalStatistics() {
                         />
                       </svg>
                     </button>
+
                     <button
-                      onClick={() =>
+                      disabled={!currentTrack}
+                      onClick={togglePlayPause}
+                      className={`w-8 h-8 flex items-center justify-center rounded-full transition-transform shadow-sm ${
                         currentTrack
-                          ? togglePlayPause()
-                          : playTrack(displayTrack)
-                      }
-                      className="w-8 h-8 flex items-center justify-center bg-accent text-white rounded-full hover:scale-105 transition-transform shadow-sm"
+                          ? "bg-accent text-white hover:scale-105"
+                          : "bg-neutral-300 dark:bg-neutral-700 text-neutral-500 cursor-not-allowed"
+                      }`}
                     >
                       {isPlaying ? <PauseIcon /> : <PlayIcon />}
                     </button>
-                    <button className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors">
+
+                    <button
+                      disabled={!currentTrack}
+                      className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -267,6 +306,7 @@ export default function MinimalStatistics() {
                       </svg>
                     </button>
                   </div>
+
                   <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium w-8 text-right transition-colors">
                     {formatDuration(displayTrack.durationMs)}
                   </span>
