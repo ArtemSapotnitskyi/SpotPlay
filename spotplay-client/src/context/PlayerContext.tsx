@@ -20,6 +20,12 @@ interface PlayerContextType {
   togglePlayPause: () => void;
   playNext: () => void;
   playPrev: () => void;
+  updateQueue: (newQueue: Track[]) => void;
+  seekTo: (time: number) => void;
+  isLooping: boolean;
+  toggleLoop: () => void;
+  volume: number;
+  setVolume: (volume: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -29,10 +35,34 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [queue, setQueue] = useState<Track[]>([]);
+  const [isLooping, setIsLooping] = useState(false);
+  const [volume, setVolume] = useState<number>(0.5);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const accumulatedSeconds = useRef(0);
   const activeTrackId = useRef<string | null>(null);
+
+  const updateQueue = useCallback((newQueue: Track[]) => {
+    setQueue(newQueue);
+    stateRef.current.queue = newQueue;
+  }, []);
+
+  const seekTo = useCallback((time: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  }, []);
+
+  const toggleLoop = useCallback(() => {
+    setIsLooping((prev) => {
+      const newValue = !prev;
+      if (audioRef.current) {
+        audioRef.current.loop = newValue;
+      }
+      return newValue;
+    });
+  }, []);
 
   // Store latest state in ref to avoid stale closures.
   const stateRef = useRef({ queue, currentTrack });
@@ -66,14 +96,25 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Switch to next track in queue.
   const playNext = useCallback(() => {
-    const { queue, currentTrack } = stateRef.current;
-    if (!currentTrack || queue.length === 0) return;
+    //Object destructuring with renaming "queue: currentQueue, currentTrack: trackNowPlaying"
+    //This reading: "Take data from queue that in stateRef.current and rewrite it to currentQueue"
+    const { queue: currentQueue, currentTrack: trackNowPlaying } =
+      stateRef.current;
+    console.log("Pressed NEXT Button");
+    console.log("Current Track:", trackNowPlaying?.title);
+    console.log("Queue size:", currentQueue.length);
+    if (!trackNowPlaying || currentQueue.length === 0) return;
 
-    const currentIndex = queue.findIndex((t) => t.id === currentTrack.id);
-    if (currentIndex !== -1 && currentIndex < queue.length - 1) {
-      executePlay(queue[currentIndex + 1]);
+    const currentIndex = currentQueue.findIndex(
+      (t) => t.id === trackNowPlaying.id,
+    );
+    if (currentIndex !== -1 && currentIndex < currentQueue.length - 1) {
+      executePlay(currentQueue[currentIndex + 1]);
     } else {
       // Stop player if queue is finished.
+      console.log(
+        "Action: Reached end of queue or track not in queue. Stopping.",
+      );
       setIsPlaying(false);
       if (audioRef.current) {
         audioRef.current.pause();
@@ -85,19 +126,26 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Switch to previous track or restart current.
   const playPrev = useCallback(() => {
-    const { queue, currentTrack } = stateRef.current;
-    if (!currentTrack || !audioRef.current) return;
+    const { queue: currentQueue, currentTrack: trackNowPlaying } =
+      stateRef.current;
+
+    console.log("Pressed Prev Button");
+    console.log("Current Track:", trackNowPlaying?.title);
+    console.log("Queue size:", currentQueue.length);
+    if (!trackNowPlaying || !audioRef.current) return;
 
     if (audioRef.current.currentTime > 3) {
       audioRef.current.currentTime = 0;
       return;
     }
 
-    if (queue.length === 0) return;
+    if (currentQueue.length === 0) return;
 
-    const currentIndex = queue.findIndex((t) => t.id === currentTrack.id);
+    const currentIndex = currentQueue.findIndex(
+      (t) => t.id === trackNowPlaying.id,
+    );
     if (currentIndex > 0) {
-      executePlay(queue[currentIndex - 1]);
+      executePlay(currentQueue[currentIndex - 1]);
     }
   }, [executePlay]);
 
@@ -128,6 +176,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.pause();
     };
   }, [playNext]);
+
+  // Synchronization volume with teg <audio>
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
 
   // Analytics tracking for played seconds.
   const sendTrackingData = async () => {
@@ -174,10 +229,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
   // Main play function triggered by user click.
   const playTrack = (track: Track, newQueue?: Track[]) => {
+    console.log("PLAY TRACK CALLED");
+    console.log("Track:", track.title);
     if (newQueue) {
       setQueue(newQueue);
+      // Update the ref immediately, do not wait for state to update asynchronously.
+      stateRef.current.queue = newQueue;
     } else if (queue.length === 0) {
       setQueue([track]);
+      stateRef.current.queue = [track];
     }
 
     if (currentTrack?.id !== track.id) {
@@ -214,13 +274,20 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         isPlaying,
         currentTime,
         queue,
+        isLooping,
+        volume,
         playTrack,
         togglePlayPause,
         playNext,
         playPrev,
+        updateQueue,
+        seekTo,
+        toggleLoop,
+        setVolume,
       }}
     >
       {children}
+      <audio ref={audioRef} loop={isLooping} />
     </PlayerContext.Provider>
   );
 };

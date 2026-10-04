@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import StandardCard from "../StandardCard/StandardCard";
+import MusicIcon from "../icons/Music";
 
 interface Playlist {
   id: string | number;
@@ -46,7 +47,6 @@ export default function CollectionGrid({
 
   return (
     <>
-      {/* Головний контейнер з темною темою */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 sm:p-8 relative transition-colors duration-300">
         <div className="flex justify-between items-end mb-6">
           <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest transition-colors">
@@ -71,7 +71,7 @@ export default function CollectionGrid({
             >
               <StandardCard
                 title={playlist.title}
-                description={`By ${playlist.owner}`}
+                description="Playlist"
                 imageUrl={playlist.imageUrl}
                 isPinned={playlist.id === pinnedId}
                 onPin={() => onPin(playlist.id)}
@@ -87,11 +87,9 @@ export default function CollectionGrid({
         </div>
       </div>
 
-      {/* Модальне вікно "View All" */}
       {isViewAllOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 dark:bg-black/40 backdrop-blur-sm transition-opacity">
           <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-2xl shadow-2xl border border-neutral-100 dark:border-neutral-800 flex flex-col max-h-[85vh] overflow-hidden transition-colors duration-300">
-            {/* Хедер модалки */}
             <div className="flex justify-between items-center p-6 sm:px-8 border-b border-neutral-100 dark:border-neutral-800 transition-colors">
               <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white transition-colors">
                 All Playlists
@@ -119,7 +117,6 @@ export default function CollectionGrid({
               </button>
             </div>
 
-            {/* Список плейлістів */}
             <div className="p-4 sm:p-6 overflow-y-auto flex flex-col gap-2 custom-scrollbar">
               {playlists.map((playlist) => (
                 <div
@@ -127,13 +124,19 @@ export default function CollectionGrid({
                   className="flex items-center justify-between p-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 transition-all group"
                 >
                   <div className="flex items-center gap-4 flex-1">
-                    <img
-                      src={playlist.imageUrl}
-                      alt={playlist.title}
-                      className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                    />
+                    {playlist.imageUrl ? (
+                      <img
+                        src={playlist.imageUrl}
+                        alt={playlist.title}
+                        className="w-14 h-14 rounded-xl object-cover shadow-sm flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl flex-shrink-0 bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center shadow-sm">
+                        <MusicIcon className="w-6 h-6 text-neutral-400 dark:text-neutral-500" />
+                      </div>
+                    )}
+
                     <div className="flex-1 flex flex-col">
-                      {/* Інлайн редагування (зміна кольорів інпуту на dark + accent) */}
                       {editingId === playlist.id ? (
                         <input
                           type="text"
@@ -152,17 +155,15 @@ export default function CollectionGrid({
                         </p>
                       )}
                       <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 transition-colors">
-                        By {playlist.owner}
+                        Playlist
                       </p>
                     </div>
                   </div>
 
-                  {/* Кнопки дій */}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {editingId === playlist.id ? (
                       <button
                         onClick={() => handleSaveEdit(playlist.id)}
-                        // Змінено text-[#1ab854] на text-accent
                         className="p-2 text-accent hover:bg-accent/10 rounded-lg transition-colors font-medium text-xs"
                       >
                         Save

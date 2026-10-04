@@ -107,3 +107,38 @@ export const addSongToPlaylist = async (
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const movePlaylist = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const playlistId = req.params.id as string;
+    const { folderId } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const updatedPlaylist = await libraryService.movePlaylistToFolder(
+      playlistId,
+      userId,
+      folderId,
+    );
+
+    if (!updatedPlaylist) {
+      res.status(404).json({ message: "Playlist not found or access denied" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Playlist moved successfully",
+      playlist: updatedPlaylist,
+    });
+  } catch (error) {
+    console.error("Move playlist error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

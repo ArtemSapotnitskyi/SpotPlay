@@ -1,5 +1,6 @@
 import { usePlayer } from "../../context/PlayerContext";
 import { formatDuration } from "../../shared/utils/formatters";
+import { useRef } from "react";
 
 //Icons
 import NextIcon from "../icons/Next";
@@ -32,10 +33,15 @@ export default function PlayerFooter() {
   const {
     currentTrack,
     isPlaying,
-    togglePlayPause,
     currentTime,
+    isLooping,
+    volume,
+    togglePlayPause,
     playNext,
     playPrev,
+    seekTo,
+    toggleLoop,
+    setVolume,
   } = usePlayer();
 
   if (!currentTrack) {
@@ -50,6 +56,46 @@ export default function PlayerFooter() {
   const durationSeconds = currentTrack.durationMs / 1000;
   const progressPercent =
     durationSeconds > 0 ? (currentTime / durationSeconds) * 100 : 0;
+
+  // Progress Bar Handle Click
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!currentTrack) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, clickX / rect.width));
+    const durationSeconds = currentTrack.durationMs / 1000;
+    const newTime = percent * durationSeconds;
+
+    seekTo(newTime);
+  };
+
+  // Vloume Bar Handle Click
+  const volumeBarRef = useRef<HTMLDivElement>(null);
+
+  const updateVolumeFromEvent = (e: MouseEvent | React.MouseEvent) => {
+    if (!volumeBarRef.current) return;
+
+    const rect = volumeBarRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const newVolume = Math.max(0, Math.min(1, clickX / rect.width));
+
+    setVolume(newVolume);
+  };
+
+  const handleVolumeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    updateVolumeFromEvent(e);
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      updateVolumeFromEvent(moveEvent);
+    };
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
 
   return (
     <div className="flex items-center h-full px-2">
@@ -99,8 +145,20 @@ export default function PlayerFooter() {
           >
             <NextIcon />
           </button>
-          <button className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors">
+          <button
+            disabled={!currentTrack}
+            onClick={toggleLoop}
+            className={`transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isLooping
+                ? "text-accent"
+                : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+            }`}
+            title={isLooping ? "Disable repeat" : "Repeat track"}
+          >
             <RepeatIcon />
+            {isLooping && (
+              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></span>
+            )}
           </button>
         </div>
 
@@ -110,9 +168,12 @@ export default function PlayerFooter() {
             {formatDuration(currentTime * 1000)}
           </span>
 
-          <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full cursor-pointer group flex items-center relative transition-colors">
+          <div
+            onClick={handleProgressClick}
+            className="h-2 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full cursor-pointer group flex items-center relative transition-colors"
+          >
             <div
-              className="h-full bg-accent rounded-full relative transition-all duration-300"
+              className="h-full bg-accent rounded-full relative transition-all duration-150"
               style={{ width: `${progressPercent}%` }}
             >
               <div className="hidden group-hover:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white dark:bg-neutral-200 rounded-full shadow-md border border-neutral-100 dark:border-neutral-700"></div>
@@ -125,7 +186,7 @@ export default function PlayerFooter() {
         </div>
       </div>
 
-      {/* 3. RIGHT: Extra Controls */}
+      {/* Extra Controls */}
       <div className="w-[30%] min-w-[180px] flex items-center justify-end gap-4 text-neutral-400 dark:text-neutral-500 transition-colors">
         <button className="hover:text-neutral-900 dark:hover:text-white transition-colors">
           <QueueIcon />
@@ -133,11 +194,22 @@ export default function PlayerFooter() {
 
         {/* Volume Slider */}
         <div className="flex items-center gap-2 w-24 group cursor-pointer">
-          <button className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+          <button
+            onClick={() => setVolume(volume === 0 ? 1 : 0)}
+            className="hover:text-neutral-900 dark:hover:text-white transition-colors"
+          >
             <VolumeIcon />
           </button>
-          <div className="h-1 flex-1 bg-neutral-200 dark:bg-neutral-800 rounded-full flex items-center relative transition-colors">
-            <div className="h-full bg-neutral-400 dark:bg-neutral-500 group-hover:bg-accent dark:group-hover:bg-accent rounded-full w-[60%] transition-colors relative">
+
+          <div
+            ref={volumeBarRef}
+            onMouseDown={handleVolumeMouseDown}
+            className="h-1 flex-1 bg-neutral-200 dark:bg-neutral-800 rounded-full flex items-center relative transition-colors"
+          >
+            <div
+              className="h-full bg-neutral-400 dark:bg-neutral-500 group-hover:bg-accent dark:group-hover:bg-accent rounded-full relative transition-colors"
+              style={{ width: `${volume * 100}%` }}
+            >
               <div className="hidden group-hover:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white dark:bg-neutral-200 rounded-full shadow-md border border-neutral-100 dark:border-neutral-700"></div>
             </div>
           </div>

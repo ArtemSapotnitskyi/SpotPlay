@@ -169,31 +169,28 @@ export const getMySongs = async (
   }
 };
 
-export const deleteSong = async (
+export const removeSongFromPlaylist = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const songId = req.params.id as string;
-
+    const playlistId = req.params.id as string;
+    const songId = req.body.songId as string;
     if (!userId) {
       res.status(401).json({ message: "Unauthorized" });
       return;
     }
-
-    const isDeleted = await songService.deleteSongById(songId, userId);
-
-    if (!isDeleted) {
-      res
-        .status(404)
-        .json({ message: "Song not found or you don't have permission" });
+    if (!songId) {
+      res.status(400).json({ message: "Song ID is required" });
       return;
     }
-
-    res.status(200).json({ message: "Song deleted successfully" });
-  } catch (error) {
-    console.error("Delete song error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    await songService.removeSongFromPlaylistDb(playlistId, songId, userId);
+    res
+      .status(200)
+      .json({ message: "Song removed from playlist successfully" });
+  } catch (error: any) {
+    console.error("Remove song from playlist error:", error);
+    res.status(500).json({ message: error.message || "Internal server error" });
   }
 };

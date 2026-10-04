@@ -15,7 +15,7 @@ const PlayIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
 
 export default function Playlist() {
   const { id } = useParams<{ id: string }>();
-  const { playTrack, currentTrack } = usePlayer();
+  const { playTrack, currentTrack, updateQueue } = usePlayer();
 
   const [playlistInfo, setPlaylistInfo] = useState<any>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -82,7 +82,7 @@ export default function Playlist() {
   }
 
   const gridLayout =
-    "grid grid-cols-[40px_1fr_50px] md:grid-cols-[40px_6fr_4fr_3fr_50px] gap-4 items-center px-4";
+    "grid grid-cols-[40px_1fr_80px] md:grid-cols-[40px_6fr_4fr_3fr_80px] gap-4 items-center px-4";
 
   const totalDurationMs = tracks.reduce(
     (sum, track) => sum + track.durationMs,
@@ -118,12 +118,29 @@ export default function Playlist() {
         credits: [],
       };
 
-      setTracks((prev) => [...prev, newTrack]);
+      const updatedTracksList = [...tracks, newTrack];
+      setTracks(updatedTracksList);
+      updateQueue(updatedTracksList);
+
       setSearchQuery("");
       setIsAddModalOpen(false);
     } catch (error) {
       console.error("Failed to add track:", error);
       alert("Error adding track! Check console for details.");
+    }
+  };
+
+  const handleDeleteTrack = async (songId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!id) return;
+    try {
+      await libraryService.removeSongFromPlaylist(id, songId);
+      const updatedTracksList = tracks.filter((track) => track.id !== songId);
+      setTracks(updatedTracksList);
+      updateQueue(updatedTracksList);
+    } catch (error) {
+      console.error("Failed to remove track:", error);
+      alert("Error removing track from playlist.");
     }
   };
 
@@ -221,7 +238,7 @@ export default function Playlist() {
             return (
               <div
                 key={track.id}
-                onClick={() => playTrack(track)}
+                onClick={() => playTrack(track, tracks)}
                 className={`${gridLayout} py-2.5 rounded-xl hover:bg-white dark:hover:bg-neutral-900 border border-transparent hover:border-neutral-100 dark:hover:border-neutral-800 hover:shadow-sm transition-all group cursor-pointer`}
               >
                 <div className="text-center text-neutral-400 dark:text-neutral-500 font-medium w-full flex justify-center transition-colors">
@@ -261,8 +278,28 @@ export default function Playlist() {
                   {formatDate(track.addedAt)}
                 </div>
 
-                <div className="text-sm text-neutral-500 dark:text-neutral-400 text-right pr-4 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">
-                  {formatDuration(track.durationMs)}
+                <div className="flex justify-end items-center gap-3 pr-4">
+                  <span className="text-sm text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">
+                    {formatDuration(track.durationMs)}
+                  </span>
+
+                  <button
+                    onClick={(e) => handleDeleteTrack(track.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-all focus:outline-none"
+                    title="Remove from playlist"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-[18px] h-[18px]"
+                    >
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             );

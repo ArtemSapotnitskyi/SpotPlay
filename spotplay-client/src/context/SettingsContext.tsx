@@ -21,7 +21,6 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 );
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  // Зчитуємо збережені налаштування або ставимо дефолтні
   const [theme, setTheme] = useState<Theme>(
     (localStorage.getItem("app-theme") as Theme) || "system",
   );

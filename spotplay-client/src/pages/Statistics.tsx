@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { formatDuration, formatSecondsToHM } from "../shared/utils/formatters";
-import { allTracks } from "../data/seed";
+import { libraryService } from "../shared/api/services/libraryService";
+import type { Track } from "../data/seed";
 
 import {
   activityService,
@@ -50,8 +51,17 @@ const formatCompactNumber = (num: number) => {
 };
 
 export default function MinimalStatistics() {
-  const { currentTrack, isPlaying, togglePlayPause, playTrack, currentTime } =
-    usePlayer();
+  const {
+    currentTrack,
+    isPlaying,
+    togglePlayPause,
+    playTrack,
+    currentTime,
+    playNext,
+    playPrev,
+    seekTo,
+  } = usePlayer();
+
   const displayTrack = currentTrack || PLACEHOLDER_TRACK;
 
   // Pogress bar
@@ -62,6 +72,9 @@ export default function MinimalStatistics() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [heavyRotationTracks, setHeavyRotationTracks] = useState<Track[]>([]);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(true);
 
   // Fetch dashboard statistics on component mount
   useEffect(() => {
@@ -79,6 +92,22 @@ export default function MinimalStatistics() {
     };
 
     fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const fetchRecentTracks = async () => {
+      try {
+        setIsLoadingTracks(true);
+        const mySongs = await libraryService.getMySongs();
+        setHeavyRotationTracks(mySongs.slice(0, 3));
+      } catch (err) {
+        console.error("Failed to fetch heavy rotation tracks:", err);
+      } finally {
+        setIsLoadingTracks(false);
+      }
+    };
+
+    fetchRecentTracks();
   }, []);
 
   useEffect(() => {
@@ -146,6 +175,19 @@ export default function MinimalStatistics() {
       </div>
     );
   }
+
+  // Progress Bar Handle Click
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!currentTrack) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, clickX / rect.width));
+    const durationSeconds = currentTrack.durationMs / 1000;
+    const newTime = percent * durationSeconds;
+
+    seekTo(newTime);
+  };
 
   const allTime = formatSecondsToHM(stats.totalListening.allTimeSeconds);
   const thisWeek = formatSecondsToHM(stats.totalListening.thisWeekSeconds);
@@ -241,7 +283,10 @@ export default function MinimalStatistics() {
               </div>
 
               <div className="space-y-3">
-                <div className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full group/slider cursor-pointer flex items-center relative transition-colors">
+                <div
+                  onClick={handleProgressClick}
+                  className="h-1 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full group/slider cursor-pointer flex items-center relative transition-colors"
+                >
                   <div
                     className="h-full bg-accent rounded-full relative transition-all duration-300"
                     style={{ width: `${progressPercent || 0}%` }}
@@ -258,6 +303,7 @@ export default function MinimalStatistics() {
                   <div className="flex items-center gap-4">
                     <button
                       disabled={!currentTrack}
+                      onClick={playPrev}
                       className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg
@@ -289,6 +335,7 @@ export default function MinimalStatistics() {
 
                     <button
                       disabled={!currentTrack}
+                      onClick={playNext}
                       className="text-neutral-400 dark:text-neutral-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg
@@ -409,55 +456,65 @@ export default function MinimalStatistics() {
               Heavy Rotation
             </span>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {allTracks.slice(0, 3).map((track) => {
-                const isThisTrackPlaying =
-                  currentTrack?.id === track.id && isPlaying;
+              {isLoadingTracks ? (
+                <div className="col-span-3 text-neutral-500 text-sm">
+                  Loading recent tracks...
+                </div>
+              ) : heavyRotationTracks.length === 0 ? (
+                <div className="col-span-3 text-neutral-500 text-sm">
+                  No recent tracks found. Add some music!
+                </div>
+              ) : (
+                heavyRotationTracks.map((track) => {
+                  const isThisTrackPlaying =
+                    currentTrack?.id === track.id && isPlaying;
 
-                return (
-                  <div
-                    key={track.id}
-                    onClick={() => playTrack(track)}
-                    className="flex items-center gap-4 group cursor-pointer p-2 -m-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
-                  >
-                    <img
-                      src={track.imageUrl || track.artist.imageUrl}
-                      className="w-12 h-12 rounded-lg object-cover grayscale-[15%] group-hover:grayscale-0 transition-all shadow-sm"
-                      alt={track.title}
-                    />
-                    <div>
-                      <p
-                        className={`font-medium text-sm group-hover:underline decoration-1 underline-offset-2 transition-colors ${
+                  return (
+                    <div
+                      key={track.id}
+                      onClick={() => playTrack(track, heavyRotationTracks)}
+                      className="flex items-center gap-4 group cursor-pointer p-2 -m-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                    >
+                      <img
+                        src={track.imageUrl || track.artist.imageUrl}
+                        className="w-12 h-12 rounded-lg object-cover grayscale-[15%] group-hover:grayscale-0 transition-all shadow-sm"
+                        alt={track.title}
+                      />
+                      <div>
+                        <p
+                          className={`font-medium text-sm group-hover:underline decoration-1 underline-offset-2 transition-colors ${
+                            isThisTrackPlaying
+                              ? "text-accent"
+                              : "text-neutral-900 dark:text-white"
+                          }`}
+                        >
+                          {track.title}
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 transition-colors">
+                          {track.artist.name}
+                        </p>
+                      </div>
+                      <div
+                        className={`ml-auto transition-opacity text-accent ${
                           isThisTrackPlaying
-                            ? "text-accent"
-                            : "text-neutral-900 dark:text-white"
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
                         }`}
                       >
-                        {track.title}
-                      </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 transition-colors">
-                        {track.artist.name}
-                      </p>
+                        {isThisTrackPlaying ? (
+                          <div className="w-5 h-5">
+                            <PauseIcon />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5">
+                            <PlayIcon />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div
-                      className={`ml-auto transition-opacity text-accent ${
-                        isThisTrackPlaying
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-100"
-                      }`}
-                    >
-                      {isThisTrackPlaying ? (
-                        <div className="w-5 h-5">
-                          <PauseIcon />
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5">
-                          <PlayIcon />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

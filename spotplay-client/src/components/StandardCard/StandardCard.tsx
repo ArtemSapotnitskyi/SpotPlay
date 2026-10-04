@@ -1,3 +1,5 @@
+import MusicIcon from "../icons/Music";
+
 interface StandardCardProps {
   title: string;
   description: string;
@@ -15,12 +17,16 @@ export default function StandardCard({
 }: StandardCardProps) {
   return (
     <div className="p-3 bg-white dark:bg-neutral-900 rounded-[1rem] border border-transparent hover:border-accent dark:hover:border-accent hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-all cursor-pointer group flex flex-col gap-3 h-full relative">
-      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-800 transition-colors">
-        <img
-          src={imageUrl}
-          alt={title}
-          className="object-cover w-full h-full"
-        />
+      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-800 transition-colors flex items-center justify-center">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={title}
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <MusicIcon className="w-12 h-12 text-neutral-400 dark:text-neutral-500" />
+        )}
 
         <div className="absolute right-2 bottom-2 bg-accent text-white rounded-full p-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-sm hover:scale-105">
           <svg className="w-4 h-4 ml-0.5 fill-current" viewBox="0 0 24 24">

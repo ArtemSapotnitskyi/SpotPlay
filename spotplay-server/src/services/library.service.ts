@@ -92,3 +92,18 @@ export const getLibraryTree = async (userId: string) => {
 
   return library;
 };
+
+export const movePlaylistToFolder = async (
+  playlistId: string,
+  userId: string,
+  folderId: string | null,
+) => {
+  const result = await pool.query(
+    `UPDATE Playlists 
+     SET FolderId = $1 
+     WHERE Id = $2 AND UserId = $3 
+     RETURNING *`,
+    [folderId, playlistId, userId],
+  );
+  return result.rows[0];
+};

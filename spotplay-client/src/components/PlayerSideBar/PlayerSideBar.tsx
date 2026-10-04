@@ -1,12 +1,38 @@
 import { useState, useEffect } from "react";
 import { usePlayer } from "../../context/PlayerContext";
-import { allTracks } from "../../data/seed";
+
+const isRelatedArtist = (
+  currentArtist: string,
+  checkArtist: string,
+): boolean => {
+  if (!currentArtist || !checkArtist) return false;
+
+  const current = currentArtist.toLowerCase();
+  const check = checkArtist.toLowerCase();
+
+  if (current === check) return true;
+
+  if (check.includes(current)) return true;
+
+  if (current.includes(check)) return true;
+
+  const splitKeywords = (name: string) =>
+    name
+      .split(/&|,|feat\.?| x /)
+      .map((n) => n.trim())
+      .filter(Boolean);
+
+  const currentKeywords = splitKeywords(current);
+  const checkKeywords = splitKeywords(check);
+
+  return currentKeywords.some((keyword) => checkKeywords.includes(keyword));
+};
 
 export default function PlayerSideBar() {
   const [width, setWidth] = useState(320);
   const [resizing, setResizing] = useState(false);
 
-  const { currentTrack, playTrack } = usePlayer();
+  const { currentTrack, queue, playTrack } = usePlayer();
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -46,11 +72,14 @@ export default function PlayerSideBar() {
 
   if (!currentTrack) return null;
 
-  const artistTracks = allTracks.filter(
-    (track) =>
-      track.artist.name === currentTrack.artist.name &&
-      track.id !== currentTrack.id,
-  );
+  const artistTracks = queue
+    .filter((track) => {
+      return (
+        track.id !== currentTrack.id &&
+        isRelatedArtist(currentTrack.artist.name, track.artist.name)
+      );
+    })
+    .slice(0, 5);
 
   return (
     <aside
@@ -98,7 +127,7 @@ export default function PlayerSideBar() {
               artistTracks.map((track) => (
                 <div
                   key={track.id}
-                  onClick={() => playTrack(track)}
+                  onClick={() => playTrack(track, queue)}
                   className="flex items-center gap-4 p-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 transition-all cursor-pointer group"
                 >
                   <div className="w-10 h-10 rounded-lg overflow-hidden relative shrink-0 bg-neutral-100 dark:bg-neutral-800">
@@ -122,7 +151,7 @@ export default function PlayerSideBar() {
                       {track.title}
                     </p>
                     <p className="text-[11px] font-medium text-neutral-400 mt-0.5 truncate transition-colors">
-                      {track.albumName}
+                      {track.artist.name}
                     </p>
                   </div>
                 </div>
@@ -145,7 +174,7 @@ export default function PlayerSideBar() {
                   </svg>
                 </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 transition-colors">
-                  No other tracks found in your library.
+                  No other tracks found in current playlist.
                 </p>
               </div>
             )}

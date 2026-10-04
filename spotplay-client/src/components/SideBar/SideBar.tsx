@@ -116,6 +116,13 @@ export default function SideBar() {
     }
   };
 
+  const allPlaylists = library
+    ? [
+        ...library.rootPlaylists,
+        ...library.folders.flatMap((folder) => folder.playlists),
+      ]
+    : [];
+
   return (
     <>
       <aside
@@ -269,31 +276,7 @@ export default function SideBar() {
               </li>
             ) : (
               <>
-                {library?.folders.map((folder) => (
-                  <li key={folder.id}>
-                    <div
-                      className={`flex items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer transition-all duration-200 group ${
-                        isCollapsed ? "justify-center p-1" : "gap-3 p-2"
-                      }`}
-                    >
-                      <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-neutral-200/50 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-lg group-hover:text-accent transition-colors">
-                        <FolderIcon />
-                      </div>
-                      {!isCollapsed && (
-                        <div className="overflow-hidden flex-1">
-                          <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate group-hover:text-accent transition-colors">
-                            {folder.name}
-                          </p>
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5 transition-colors">
-                            Folder
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </li>
-                ))}
-
-                {library?.rootPlaylists.map((item) => (
+                {allPlaylists.map((item) => (
                   <li key={item.id}>
                     <Link
                       to={`/playlist/${item.id}`}
@@ -319,13 +302,11 @@ export default function SideBar() {
                   </li>
                 ))}
 
-                {/* Пустий стан */}
-                {library?.folders.length === 0 &&
-                  library?.rootPlaylists.length === 0 && (
-                    <li className="text-center text-xs text-neutral-500 dark:text-neutral-400 p-4">
-                      Your library is empty.
-                    </li>
-                  )}
+                {allPlaylists.length === 0 && (
+                  <li className="text-center text-xs text-neutral-500 dark:text-neutral-400 p-4">
+                    Your library is empty.
+                  </li>
+                )}
               </>
             )}
           </ul>

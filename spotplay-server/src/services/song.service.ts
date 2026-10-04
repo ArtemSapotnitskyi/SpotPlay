@@ -30,16 +30,29 @@ export const getUserSongs = async (userId: string) => {
     `SELECT Id, Title, Artist, SourceUrl, CoverImage, DurationSeconds, CreatedAt 
      FROM songs 
      WHERE AddedByUserId = $1 
+     AND EXISTS (SELECT 1 FROM playlistsongs WHERE SongId = songs.Id)
      ORDER BY CreatedAt DESC`,
     [userId],
   );
   return result.rows;
 };
 
-export const deleteSongById = async (songId: string, userId: string) => {
-  const result = await pool.query(
-    `DELETE FROM songs WHERE Id = $1 AND AddedByUserId = $2 RETURNING Id`,
-    [songId, userId],
+export const removeSongFromPlaylistDb = async (
+  playlistId: string,
+  songId: string,
+  userId: string,
+) => {
+  const checkOwner = await pool.query(
+    `SELECT Id FROM Playlists WHERE Id = $1 AND UserId = $2`,
+    [playlistId, userId],
   );
+  if (checkOwner.rowCount === 0) {
+    throw new Error("Playlist not found or you don't have permission");
+  }
+  const result = await pool.query(
+    `DELETE FROM PlaylistSongs WHERE PlaylistId = $1 AND SongId = $2 RETURNING *`,
+    [playlistId, songId],
+  );
+
   return result.rowCount ? result.rowCount > 0 : false;
 };
