@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { authService } from "../shared/api/services/authService";
+import {
+  authService,
+  type AuthResponse,
+} from "../shared/api/services/authService";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,10 +20,16 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
+      let response: AuthResponse;
+
       if (isLogin) {
-        await authService.login(email, password);
+        response = await authService.login(email, password);
       } else {
-        await authService.register(username, email, password);
+        response = await authService.register(username, email, password);
+      }
+
+      if (response && response.user) {
+        localStorage.setItem("spotplay_user", JSON.stringify(response.user));
       }
 
       window.location.href = "/";

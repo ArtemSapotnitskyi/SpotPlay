@@ -1,6 +1,8 @@
+// NavPanel.tsx
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSettings } from "../../context/SettingsContext";
+import { useAuth } from "../../context/AuthContext";
 
 // Icons
 import StatIcon from "../icons/Stat";
@@ -14,6 +16,7 @@ export default function NavPanel() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { theme, setTheme, accentColor, setAccentColor } = useSettings();
+  const { user, logout } = useAuth();
 
   const colorOptions = [
     { name: "Green", hex: "#1ab854" },
@@ -54,7 +57,11 @@ export default function NavPanel() {
 
           <div className="w-10 h-10 rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
             <img
-              src="https://i.pravatar.cc/150?img=33"
+              src={
+                user
+                  ? `https://ui-avatars.com/api/?name=${user.username}&background=random`
+                  : "https://i.pravatar.cc/150?img=33"
+              }
               alt="User Avatar"
               className="w-full h-full object-cover"
             />
@@ -129,7 +136,11 @@ export default function NavPanel() {
             </svg>
           </button>
 
-          <button className="text-gray-400 hover:text-player-dark dark:hover:text-white transition-colors">
+          <button
+            onClick={logout}
+            title="Sign Out"
+            className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -182,6 +193,7 @@ export default function NavPanel() {
             </div>
 
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Appearance Block */}
               <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 flex flex-col gap-6 transition-colors">
                 <div>
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1 block">
@@ -191,7 +203,6 @@ export default function NavPanel() {
                     Theme
                   </h3>
                 </div>
-
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setTheme("light")}
@@ -216,7 +227,6 @@ export default function NavPanel() {
                       Light
                     </span>
                   </button>
-
                   <button
                     onClick={() => setTheme("dark")}
                     className={`flex flex-col items-center gap-3 p-3 rounded-2xl border-2 transition-all ${theme === "dark" ? "border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-800" : "border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"}`}
@@ -240,7 +250,6 @@ export default function NavPanel() {
                       Dark
                     </span>
                   </button>
-
                   <button
                     onClick={() => setTheme("system")}
                     className={`flex flex-col items-center gap-3 p-3 rounded-2xl border-2 transition-all ${theme === "system" ? "border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-800" : "border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"}`}
@@ -267,6 +276,7 @@ export default function NavPanel() {
                 </div>
               </div>
 
+              {/* Personalization Block */}
               <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 flex flex-col gap-6 transition-colors">
                 <div>
                   <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1 block">
@@ -276,7 +286,6 @@ export default function NavPanel() {
                     Accent Color
                   </h3>
                 </div>
-
                 <div className="flex items-center justify-between gap-2 mt-2">
                   {colorOptions.map((color) => (
                     <button
@@ -304,7 +313,6 @@ export default function NavPanel() {
                     </button>
                   ))}
                 </div>
-
                 <div className="mt-auto pt-6 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
                   <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                     Preview:
@@ -321,7 +329,11 @@ export default function NavPanel() {
               <div className="md:col-span-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6 transition-colors">
                 <div className="relative group cursor-pointer">
                   <img
-                    src="https://i.pravatar.cc/150?img=33"
+                    src={
+                      user
+                        ? `https://ui-avatars.com/api/?name=${user.username}&background=random`
+                        : "https://i.pravatar.cc/150?img=33"
+                    }
                     alt="Profile"
                     className="w-20 h-20 rounded-full object-cover border border-neutral-200 dark:border-neutral-800 shadow-sm"
                   />
@@ -347,10 +359,10 @@ export default function NavPanel() {
                     Account
                   </span>
                   <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
-                    User Profile
+                    {user?.username || "Guest User"}
                   </h3>
                   <p className="text-sm text-neutral-500 mt-1">
-                    user.account@example.com
+                    {user?.email || "Not signed in"}
                   </p>
 
                   <div className="mt-4 flex gap-3 justify-center sm:justify-start">
