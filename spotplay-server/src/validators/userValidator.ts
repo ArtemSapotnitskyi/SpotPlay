@@ -1,4 +1,4 @@
-import { z } from "Zod";
+import { z } from "zod";
 
 export const registerSchema = z.object({
   username: z.string().min(3, "The name must contain at least 3 characters."),
