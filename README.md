@@ -56,7 +56,7 @@ To run this project locally, ensure you have Node.js installed, then follow thes
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/spotplay-front.git](https://github.com/YOUR_USERNAME/spotplay-front.git)
+   git clone [https://github.com/ArtemSapotnitskyi/SpotPlay.git](https://github.com/ArtemSapotnitskyi/SpotPlay.git)
    cd spotplay-front
    ```
 2. **Install dependencies:**
