@@ -1,75 +1,82 @@
-# React + TypeScript + Vite
+# SpotPlay 🎵
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![SpotPlay Banner](./assets/overview.jpg)
 
-Currently, two official plugins are available:
+**SpotPlay** is a premium, cross-platform music streaming desktop application built with React and Electron. It leverages APIs from **SoundCloud** and **YouTube** to provide users with an infinite library of tracks without requiring local storage.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The project features a custom audio engine, comprehensive library management, and a robust Node.js/PostgreSQL backend hosted on Render and NeonDB.
 
-## React Compiler
+## ✨ Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- 🎧 **Seamless Streaming:** Pulls and plays audio dynamically from SoundCloud and YouTube.
+- 📊 **Advanced Analytics:** A dedicated "Overview" dashboard tracks daily listening time, streaks, and library statistics.
+- 📁 **Library Management (My Vault):** Create playlists, group them into folders, and pin favorite collections for quick access.
+- 🎨 **Deep Customization:** Fully personalized UI with Light/Dark/System themes and customizable accent colors.
+- 🔒 **Secure Authentication:** JWT-based auth system with automatic token refreshing.
+- 💻 **Native Desktop Experience:** Packaged with Electron featuring a frameless, modern window design (`titleBarStyle: 'hidden'`).
 
-## Expanding the ESLint configuration
+## 📸 App Screenshots
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### My Vault & Library Management
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+![My Vault](./assets/vault.jpg)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Customization & Settings
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+![Settings Modal](./assets/settings.jpg)
 
-```
+## 🛠️ Tech Stack
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+**Frontend & Desktop:**
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **React 19** & **TypeScript**
+- **Vite** (Bundler) & **Tailwind CSS** (Styling)
+- **React Router** (HashRouter for desktop navigation)
+- **Electron** & **Electron-Builder** (Desktop compilation)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Backend & Database:**
 
-```
+- **Node.js** & **Express**
+- **PostgreSQL** (hosted on NeonDB)
+- **pg-pool** (Database connections)
+- **Render** (Cloud hosting)
+
+## 🚀 Getting Started
+
+### For Users
+
+Download the latest release for your operating system:
+
+- [Download for macOS (.dmg)](https://drive.google.com/file/d/1dsyePbSNUCueC0oF9dJr1fa15BncUP1_/view?usp=sharing)
+- [Download for Windows (.exe)](https://drive.google.com/file/d/1muysSbAlk-Vhl0IeUVrLk3heopJggCMl/view?usp=drive_link)
+
+### For Developers
+
+To run this project locally, ensure you have Node.js installed, then follow these steps:
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/YOUR_USERNAME/spotplay-front.git](https://github.com/YOUR_USERNAME/spotplay-front.git)
+   cd spotplay-front
+   ```
+2. **Install dependencies:**
+
+   ```bash
+   npm install
+
+   ```
+
+3. **Run the application in development mode:**
+
+   ```bash
+   npm run electron:dev
+   ```
+
+4. **Build the executable for your OS:**
+   ```bash
+   npm run electron:build
+   ```
+
+(To build for Windows from macOS, use npm run electron:build:win)
+
+Designed and developed by [Artem Sapotnitskyi]

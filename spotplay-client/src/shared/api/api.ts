@@ -44,12 +44,14 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
+
         if (
-          window.location.pathname !== "/login" &&
-          window.location.pathname !== "/register"
+          !window.location.hash.includes("#/login") &&
+          !window.location.hash.includes("#/register")
         ) {
-          window.location.href = "/login";
+          window.location.hash = "#/login";
         }
+
         return Promise.reject(refreshError);
       }
     }
