@@ -6,9 +6,9 @@ export const BASE_URL =
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, //ALLOWS the browser to send the refreshToken in cookies
-  headers: {
-    "Content-Type": "application/json",
-  },
+    headers: {
+      "Content-Type": "application/json",
+    },
 });
 
 apiClient.interceptors.request.use((config) => {

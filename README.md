@@ -1,6 +1,6 @@
 # SpotPlay 🎵
 
-![SpotPlay Banner](./assets/overview.jpg)
+![SpotPlay Banner](screenshots/overview.png)
 
 **SpotPlay** is a premium, cross-platform music streaming desktop application built with React and Electron. It leverages APIs from **SoundCloud** and **YouTube** to provide users with an infinite library of tracks without requiring local storage.
 
@@ -19,11 +19,11 @@ The project features a custom audio engine, comprehensive library management, an
 
 ### My Vault & Library Management
 
-![My Vault](./assets/vault.jpg)
+![My Vault](screenshots/vault.png)
 
 ### Customization & Settings
 
-![Settings Modal](./assets/settings.jpg)
+![Settings Modal](screenshots/settings.png)
 
 ## 🛠️ Tech Stack
 
